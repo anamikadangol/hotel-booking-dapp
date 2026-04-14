@@ -1,0 +1,29 @@
+[
+  {
+    "id": "RM-101",
+    "slug": "standard-room",
+    "name": "Standard Room",
+    "price": 120,
+    "capacity": 2,
+    "description": "A comfortable standard room for two guests.",
+    "amenities": ["WiFi", "TV", "Air Conditioning"]
+  },
+  {
+    "id": "RM-201",
+    "slug": "deluxe-room",
+    "name": "Deluxe Room",
+    "price": 180,
+    "capacity": 3,
+    "description": "A spacious deluxe room with modern facilities.",
+    "amenities": ["WiFi", "TV", "Mini Bar", "Air Conditioning"]
+  },
+  {
+    "id": "RM-301",
+    "slug": "suite",
+    "name": "Suite",
+    "price": 250,
+    "capacity": 4,
+    "description": "A premium suite with extra space and luxury amenities.",
+    "amenities": ["WiFi", "TV", "Mini Bar", "Balcony", "Air Conditioning"]
+  }
+]
