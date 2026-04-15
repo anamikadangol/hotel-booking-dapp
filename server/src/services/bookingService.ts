@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { getRoomById } from "./roomService";
+import { saveBookingProofOnChain } from "./algorandService";
 
 export interface Booking {
   id: string;
@@ -11,6 +12,7 @@ export interface Booking {
   checkOut: string;
   guests: number;
   status: string;
+  txId?: string;
   createdAt: string;
 }
 
@@ -25,7 +27,9 @@ function writeBookings(bookings: Booking[]) {
   fs.writeFileSync(bookingsFilePath, JSON.stringify(bookings, null, 2));
 }
 
-export function createBooking(data: Omit<Booking, "id" | "status" | "createdAt">): Booking {
+export async function createBooking(
+  data: Omit<Booking, "id" | "status" | "createdAt" | "txId">
+): Promise<Booking> {
   const room = getRoomById(data.roomId);
 
   if (!room) {
@@ -38,8 +42,14 @@ export function createBooking(data: Omit<Booking, "id" | "status" | "createdAt">
 
   const bookings = readBookings();
 
+  const bookingId = `BKG-${Date.now()}`;
+
+  const bookingProof = `BOOKING|${bookingId}|${data.roomId}|${data.checkIn}|${data.checkOut}`;
+
+  const txId = await saveBookingProofOnChain(bookingProof);
+
   const newBooking: Booking = {
-    id: `BKG-${Date.now()}`,
+    id: bookingId,
     roomId: data.roomId,
     guestName: data.guestName,
     guestEmail: data.guestEmail,
@@ -47,6 +57,7 @@ export function createBooking(data: Omit<Booking, "id" | "status" | "createdAt">
     checkOut: data.checkOut,
     guests: data.guests,
     status: "confirmed",
+    txId,
     createdAt: new Date().toISOString(),
   };
 

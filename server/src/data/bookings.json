@@ -1,0 +1,8 @@
+{
+  "roomId": "RM-101",
+  "guestName": "Anamika",
+  "guestEmail": "anamika@example.com",
+  "checkIn": "2026-04-10",
+  "checkOut": "2026-04-12",
+  "guests": 2
+}
