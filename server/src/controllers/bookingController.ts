@@ -1,38 +1,56 @@
 import { Request, Response } from "express";
 import { createBooking, getAllBookings } from "../services/bookingService";
 
-export function fetchBookings(req: Request, res: Response) {
+export const fetchBookings = (_req: Request, res: Response) => {
   const bookings = getAllBookings();
-  res.status(200).json(bookings);
-}
 
-export async function createBookingHandler(req: Request, res: Response) {
+  return res.json({
+    success: true,
+    data: bookings,
+  });
+};
+
+export const addBooking = async (req: Request, res: Response) => {
   try {
-    const { roomId, guestName, guestEmail, checkIn, checkOut, guests } = req.body;
+    const { roomId, guestName, guestEmail, checkIn, checkOut, guests, totalPrice } =
+      req.body;
 
-    if (!roomId || !guestName || !guestEmail || !checkIn || !checkOut || !guests) {
-      return res.status(400).json({ message: "All booking fields are required" });
+    if (
+      !roomId ||
+      !guestName ||
+      !guestEmail ||
+      !checkIn ||
+      !checkOut ||
+      guests === undefined ||
+      totalPrice === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required booking fields",
+      });
     }
 
-    const booking = await createBooking({
+    const newBooking = await createBooking({
       roomId,
       guestName,
       guestEmail,
       checkIn,
       checkOut,
       guests: Number(guests),
+      totalPrice: Number(totalPrice),
     });
 
     return res.status(201).json({
       success: true,
-      message: "Booking created successfully and verified on Algorand TestNet",
-      booking,
-      txId: booking.txId,
+      message: "Booking created successfully",
+      data: newBooking,
     });
-  } catch (error: any) {
-    return res.status(400).json({
+  } catch (error) {
+    console.error("Booking controller error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message || "Failed to create booking",
+      message: "Internal server error",
     });
   }
-}
+};

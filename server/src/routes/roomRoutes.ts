@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { fetchRoomById, fetchRooms } from "../controllers/roomController";
+import * as roomController from "../controllers/roomController";
 
 const router = Router();
 
-router.get("/", fetchRooms);
-router.get("/:id", fetchRoomById);
+router.get("/", roomController.fetchRooms);
+router.get("/slug/:slug", roomController.fetchRoomBySlug);
+router.get("/:id", roomController.fetchRoomById);
 
 export default router;

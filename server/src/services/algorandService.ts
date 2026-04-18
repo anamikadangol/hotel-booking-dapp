@@ -1,61 +1,53 @@
 import algosdk from "algosdk";
 
-const algodServer =
-  process.env.ALGORAND_SERVER || "https://testnet-api.algonode.cloud";
-const algodToken = process.env.ALGORAND_TOKEN || "";
-const algodPort = process.env.ALGORAND_PORT || "";
+const algodClient = new algosdk.Algodv2(
+  process.env.ALGORAND_TOKEN || "",
+  process.env.ALGORAND_SERVER || "https://testnet-api.algonode.cloud",
+  process.env.ALGORAND_PORT || ""
+);
 
-const algodClient = new algosdk.Algodv2(algodToken, algodServer, algodPort);
-
-export async function saveBookingProofOnChain(
-  bookingProof: string
-): Promise<string> {
+function getSenderAccount() {
   const mnemonic = process.env.ALGORAND_MNEMONIC;
-  const receiver = process.env.ALGORAND_RECEIVER_ADDRESS;
 
-  if (!mnemonic || !receiver) {
-    throw new Error("Algorand environment variables are missing");
+  if (!mnemonic) {
+    throw new Error("ALGORAND_MNEMONIC is missing in server/.env");
   }
 
-  const senderAccount = algosdk.mnemonicToSecretKey(mnemonic);
+  return algosdk.mnemonicToSecretKey(mnemonic.trim());
+}
+
+export async function sendBookingPayment(amountMicroAlgos: number) {
+  const sender = getSenderAccount();
+  const receiver = process.env.ALGORAND_RECEIVER_ADDRESS;
+
+  if (!receiver) {
+    throw new Error("ALGORAND_RECEIVER_ADDRESS is missing in server/.env");
+  }
 
   const suggestedParams = await algodClient.getTransactionParams().do();
 
-  const note = new TextEncoder().encode(bookingProof);
+  const note = new TextEncoder().encode("Hotel booking payment");
 
   const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    sender: senderAccount.addr,
-    receiver,
-    amount: 1000,
+    sender: sender.addr,
+    receiver: receiver.trim(),
+    amount: amountMicroAlgos,
     note,
     suggestedParams,
   });
 
-  const signedTxn = txn.signTxn(senderAccount.sk);
-  const response = await algodClient.sendRawTransaction(signedTxn).do();
+  const signedTxn = txn.signTxn(sender.sk);
 
-  const txId = response.txid;
+  const sendResult = await algodClient.sendRawTransaction(signedTxn).do();
+  const txId = sendResult.txid;
 
-  await waitForConfirmation(txId);
+  const pendingInfo = await algosdk.waitForConfirmation(algodClient, txId, 4);
 
-  return txId;
-}
-
-async function waitForConfirmation(txId: string): Promise<void> {
-  const status = await algodClient.status().do();
-  let lastRound = status.lastRound;
-
-  while (true) {
-    const pendingInfo = await algodClient.pendingTransactionInformation(txId).do();
-
-    if (
-      pendingInfo.confirmedRound !== undefined &&
-      pendingInfo.confirmedRound > 0n
-    ) {
-      return;
-    }
-
-    lastRound++;
-    await algodClient.statusAfterBlock(lastRound).do();
-  }
+  return {
+    txId,
+    confirmedRound: pendingInfo.confirmedRound
+      ? pendingInfo.confirmedRound.toString()
+      : null,
+    explorerUrl: `https://lora.algokit.io/testnet/transaction/${txId}`,
+  };
 }

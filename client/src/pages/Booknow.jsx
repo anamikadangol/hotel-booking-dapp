@@ -13,21 +13,61 @@ export default function Booknow() {
   });
 
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: name === "guests" ? Number(value) : value,
     }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
+    setMessage("");
 
-    setMessage(
-      `Booking request submitted for "${slug}". Backend + blockchain integration will be connected next.`
-    );
+    try {
+      const response = await fetch("https://friendly-trout-97j57wv7x4972x7pg-5000.app.github.dev/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomId: slug || "1",
+          guestName: formData.guestName,
+          guestEmail: formData.guestEmail,
+          checkIn: formData.checkIn,
+          checkOut: formData.checkOut,
+          guests: Number(formData.guests),
+          totalPrice: 500,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage(
+          `Booking created successfully for "${slug}". Booking ID: ${result.data?.id || "N/A"}`
+        );
+
+        setFormData({
+          guestName: "",
+          guestEmail: "",
+          checkIn: "",
+          checkOut: "",
+          guests: 1,
+        });
+      } else {
+        setMessage(result.message || "Booking failed.");
+      }
+    } catch (error) {
+      console.error("Booking request failed:", error);
+      setMessage("Could not connect to backend. Make sure server is running on port 5000.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -85,8 +125,8 @@ export default function Booknow() {
           required
         />
 
-        <button type="submit" className="btn-primary">
-          Submit Booking
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? "Submitting..." : "Submit Booking"}
         </button>
       </form>
 

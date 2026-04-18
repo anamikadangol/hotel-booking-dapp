@@ -1,8 +1,28 @@
-{
-  "roomId": "RM-101",
-  "guestName": "Anamika",
-  "guestEmail": "anamika@example.com",
-  "checkIn": "2026-04-10",
-  "checkOut": "2026-04-12",
-  "guests": 2
-}
+[
+  {
+    "id": "1776537599279",
+    "roomId": "standard-room",
+    "guestName": "Anamika Dangol",
+    "guestEmail": "arisfernandes1@gmail.com",
+    "checkIn": "2026-04-20",
+    "checkOut": "2026-04-25",
+    "guests": 1,
+    "totalPrice": 500,
+    "createdAt": "2026-04-18T18:39:59.279Z",
+    "blockchainTxId": null,
+    "blockchainExplorerUrl": null
+  },
+  {
+    "id": "1776538000186",
+    "roomId": "standard-room",
+    "guestName": "Anamika Dangol",
+    "guestEmail": "anamikaadangol@gmail.com",
+    "checkIn": "2026-04-25",
+    "checkOut": "2026-04-26",
+    "guests": 1,
+    "totalPrice": 500,
+    "createdAt": "2026-04-18T18:46:40.186Z",
+    "blockchainTxId": null,
+    "blockchainExplorerUrl": null
+  }
+]

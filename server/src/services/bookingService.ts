@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { getRoomById } from "./roomService";
-import { saveBookingProofOnChain } from "./algorandService";
+import { sendBookingPayment } from "./algorandService";
 
 export interface Booking {
   id: string;
@@ -11,62 +10,64 @@ export interface Booking {
   checkIn: string;
   checkOut: string;
   guests: number;
-  status: string;
-  txId?: string;
+  totalPrice: number;
   createdAt: string;
+  blockchainTxId?: string | null;
+  blockchainExplorerUrl?: string | null;
 }
 
 const bookingsFilePath = path.join(__dirname, "../data/bookings.json");
 
 function readBookings(): Booking[] {
-  const data = fs.readFileSync(bookingsFilePath, "utf-8");
-  return JSON.parse(data);
-}
-
-function writeBookings(bookings: Booking[]) {
-  fs.writeFileSync(bookingsFilePath, JSON.stringify(bookings, null, 2));
-}
-
-export async function createBooking(
-  data: Omit<Booking, "id" | "status" | "createdAt" | "txId">
-): Promise<Booking> {
-  const room = getRoomById(data.roomId);
-
-  if (!room) {
-    throw new Error("Room not found");
+  if (!fs.existsSync(bookingsFilePath)) {
+    fs.writeFileSync(bookingsFilePath, "[]", "utf-8");
+    return [];
   }
 
-  if (data.guests > room.capacity) {
-    throw new Error(`This room allows a maximum of ${room.capacity} guest(s)`);
+  const raw = fs.readFileSync(bookingsFilePath, "utf-8").trim();
+
+  if (!raw) {
+    fs.writeFileSync(bookingsFilePath, "[]", "utf-8");
+    return [];
   }
 
-  const bookings = readBookings();
+  return JSON.parse(raw);
+}
 
-  const bookingId = `BKG-${Date.now()}`;
-
-  const bookingProof = `BOOKING|${bookingId}|${data.roomId}|${data.checkIn}|${data.checkOut}`;
-
-  const txId = await saveBookingProofOnChain(bookingProof);
-
-  const newBooking: Booking = {
-    id: bookingId,
-    roomId: data.roomId,
-    guestName: data.guestName,
-    guestEmail: data.guestEmail,
-    checkIn: data.checkIn,
-    checkOut: data.checkOut,
-    guests: data.guests,
-    status: "confirmed",
-    txId,
-    createdAt: new Date().toISOString(),
-  };
-
-  bookings.push(newBooking);
-  writeBookings(bookings);
-
-  return newBooking;
+function saveBookings(bookings: Booking[]) {
+  fs.writeFileSync(bookingsFilePath, JSON.stringify(bookings, null, 2), "utf-8");
 }
 
 export function getAllBookings(): Booking[] {
   return readBookings();
+}
+
+export async function createBooking(
+  bookingData: Omit<Booking, "id" | "createdAt" | "blockchainTxId" | "blockchainExplorerUrl">
+): Promise<Booking> {
+  const bookings = readBookings();
+
+  let blockchainTxId: string | null = null;
+  let blockchainExplorerUrl: string | null = null;
+
+  try {
+    const blockchainResult = await sendBookingPayment(1000);
+    blockchainTxId = blockchainResult.txId;
+    blockchainExplorerUrl = blockchainResult.explorerUrl;
+  } catch (error) {
+    console.error("Algorand payment failed:", error);
+  }
+
+  const newBooking: Booking = {
+    id: Date.now().toString(),
+    ...bookingData,
+    createdAt: new Date().toISOString(),
+    blockchainTxId,
+    blockchainExplorerUrl,
+  };
+
+  bookings.push(newBooking);
+  saveBookings(bookings);
+
+  return newBooking;
 }
