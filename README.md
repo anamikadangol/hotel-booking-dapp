@@ -2,7 +2,7 @@
 A hybrid decentralized hotel booking management system built with React, Node.js, Express, and Algorand TestNet for tamper-proof reservation verification.
 
 ## Repository of Admin Panel
-https://github.com/Nabia-Sheikh/hotel-management-admin
+https://github.com/anamikadangol/hotel-booking-dapp
 
 ## Features
 - Clean Design
