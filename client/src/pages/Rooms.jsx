@@ -1,31 +1,38 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Banner from "../Components/Banner";
+import room1 from "../images/room-1.jpeg";
+import room2 from "../images/room-7.jpeg";
+import room3 from "../images/room-3.jpeg";
 
 const rooms = [
   {
     id: 1,
     name: "Standard Room",
     slug: "standard-room",
-    price: 120,
+    price: 80,
     capacity: 2,
     description: "A comfortable room for two guests with essential amenities.",
+    image: room1,
   },
   {
     id: 2,
     name: "Deluxe Room",
     slug: "deluxe-room",
-    price: 180,
+    price: 100,
     capacity: 3,
-    description: "A spacious deluxe room with modern facilities and extra comfort.",
+    description:
+      "A spacious deluxe room with modern facilities and extra comfort.",
+    image: room2,
   },
   {
     id: 3,
-    name: "Suite",
+    name: "Executive Suite",
     slug: "suite",
     price: 250,
     capacity: 4,
     description: "A premium suite offering luxury amenities and extra space.",
+    image: room3,
   },
 ];
 
@@ -38,13 +45,13 @@ export default function Rooms() {
         </Link>
       </Banner>
 
-      <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "1rem" }}>
+      <div style={{ maxWidth: "1100px", margin: "2rem auto", padding: "1rem" }}>
         <h2>Available Rooms</h2>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "1.5rem",
             marginTop: "1.5rem",
           }}
@@ -54,28 +61,52 @@ export default function Rooms() {
               key={room.id}
               style={{
                 border: "1px solid #ddd",
-                borderRadius: "10px",
-                padding: "1rem",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                borderRadius: "12px",
+                overflow: "hidden",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                 background: "#fff",
               }}
             >
-              <h3>{room.name}</h3>
-              <p>{room.description}</p>
-              <p>
-                <strong>Price:</strong> £{room.price} / night
-              </p>
-              <p>
-                <strong>Capacity:</strong> {room.capacity} guest(s)
-              </p>
+              <img
+                src={room.image}
+                alt={room.name}
+                style={{
+                  width: "100%",
+                  height: "220px",
+                  objectFit: "cover",
+                }}
+              />
 
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
-                <Link to={`/rooms/${room.slug}`} className="btn-primary">
-                  View Details
-                </Link>
-                <Link to={`/booknow/${room.slug}`} className="btn-primary">
-                  Book Now
-                </Link>
+              <div style={{ padding: "1rem" }}>
+                <h3 style={{ marginBottom: "0.75rem" }}>{room.name}</h3>
+
+                <p style={{ marginBottom: "0.75rem", lineHeight: "1.6" }}>
+                  {room.description}
+                </p>
+
+                <p style={{ marginBottom: "0.5rem" }}>
+                  <strong>Price:</strong> £{room.price} per night
+                </p>
+
+                <p style={{ marginBottom: "1rem" }}>
+                  <strong>Capacity:</strong> {room.capacity} guest(s)
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Link to={`/rooms/${room.slug}`} className="btn-primary">
+                    View Details
+                  </Link>
+
+                  <Link to={`/booknow/${room.slug}`} className="btn-primary">
+                    Book Now
+                  </Link>
+                </div>
               </div>
             </div>
           ))}

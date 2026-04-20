@@ -5,7 +5,7 @@ const Hero = ({ children, hero }) => {
   const heroStyle =
     hero === "defaultHero"
       ? {
-          minHeight: "70vh",
+          minHeight: "25vh",
           backgroundImage: `url(${defaultBcg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -15,7 +15,7 @@ const Hero = ({ children, hero }) => {
           justifyContent: "center",
         }
       : {
-          minHeight: "60vh",
+          minHeight: "40vh",
           backgroundImage: `url(${defaultBcg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",

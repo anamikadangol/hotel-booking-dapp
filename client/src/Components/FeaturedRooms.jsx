@@ -1,44 +1,106 @@
 import React from "react";
-import Loading from "./Loading";
-import Room from "./Room";
+import { Link } from "react-router-dom";
+import Banner from "../Components/Banner";
+import room1 from "../images/room-1.jpeg";
+import room2 from "../images/room-7.jpeg";
+import room3 from "../images/room-3.jpeg";
 
-const sampleRooms = [
+const rooms = [
   {
     id: 1,
     name: "Standard Room",
     slug: "standard-room",
-    images: [{ fields: { file: { url: "/src/images/room-1.jpeg" } } }],
-    price: 120,
+    price: 80,
+    description: "A comfortable room for two guests with essential amenities.",
+    image: room1,
   },
   {
     id: 2,
     name: "Deluxe Room",
     slug: "deluxe-room",
-    images: [{ fields: { file: { url: "/src/images/room-2.jpeg" } } }],
-    price: 180,
+    price: 100,
+    description:
+      "A spacious deluxe room with modern facilities and extra comfort.",
+    image: room2,
   },
   {
     id: 3,
-    name: "Suite",
+    name: "Executive Suite",
     slug: "suite",
-    images: [{ fields: { file: { url: "/src/images/room-3.jpeg" } } }],
     price: 250,
+    description: "A premium suite offering luxury amenities and extra space.",
+    image: room3,
   },
 ];
 
-export default function FeaturedRooms() {
-  const loading = false;
-
-  if (loading) {
-    return <Loading />;
-  }
-
+export default function Rooms() {
   return (
-    <section className="featured-rooms">
-      <div className="featured-rooms-center">
-        {sampleRooms.map((room) => (
-          <Room key={room.id} room={room} />
-        ))}
+    <section className="rooms-page">
+
+      <div style={{ maxWidth: "1100px", margin: "2rem auto", padding: "1rem" }}>
+        <h2>Available Rooms</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "1.5rem",
+            marginTop: "1.5rem",
+          }}
+        >
+          {rooms.map((room) => (
+            <div
+              key={room.id}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "12px",
+                overflow: "hidden",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                background: "#fff",
+              }}
+            >
+              <img
+                src={room.image}
+                alt={room.name}
+                style={{
+                  width: "100%",
+                  height: "220px",
+                  objectFit: "cover",
+                }}
+              />
+
+              <div style={{ padding: "1rem" }}>
+                <h3 style={{ marginBottom: "0.75rem" }}>{room.name}</h3>
+
+                <p style={{ marginBottom: "0.75rem", lineHeight: "1.6" }}>
+                  {room.description}
+                </p>
+
+                <p style={{ marginBottom: "0.5rem" }}>
+                  <strong>Price:</strong> £{room.price} per night
+                </p>
+
+                <p style={{ marginBottom: "1rem" }}>
+                  <strong>Capacity:</strong> {room.capacity} guest(s)
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Link to={`/rooms/${room.slug}`} className="btn-primary">
+                    View Details
+                  </Link>
+
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
