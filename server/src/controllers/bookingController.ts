@@ -1,13 +1,12 @@
 import { Request, Response } from "express";
 import { createBooking, getAllBookings } from "../services/bookingService";
 
-export const fetchBookings = (_req: Request, res: Response) => {
+export function fetchBookings(req: Request, res: Response) {
   try {
     const bookings = getAllBookings();
 
     return res.status(200).json({
       success: true,
-      message: "Bookings fetched successfully",
       data: bookings,
     });
   } catch (error) {
@@ -15,15 +14,17 @@ export const fetchBookings = (_req: Request, res: Response) => {
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error while fetching bookings",
+      message: "Failed to fetch bookings",
     });
   }
-};
+}
 
-export const addBooking = async (req: Request, res: Response) => {
+export function addBooking(req: Request, res: Response) {
   try {
     const {
       roomId,
+      roomSlug,
+      roomName,
       guestName,
       guestEmail,
       checkIn,
@@ -31,46 +32,75 @@ export const addBooking = async (req: Request, res: Response) => {
       guests,
       paymentOption,
       paymentStatus,
+      totalAmount,
     } = req.body;
 
     // Basic required field validation
     if (
       !roomId ||
+      !roomSlug ||
+      !roomName ||
       !guestName ||
       !guestEmail ||
       !checkIn ||
       !checkOut ||
-      guests === undefined ||
+      !guests ||
       !paymentOption ||
-      !paymentStatus
+      !paymentStatus ||
+      totalAmount === undefined
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Missing required fields: roomId, guestName, guestEmail, checkIn, checkOut, guests, paymentOption, paymentStatus",
+        message: "Missing required booking fields",
       });
     }
 
-    // Validate paymentOption
-    const validPaymentOptions = ["pay_later", "pay_now"];
-    if (!validPaymentOptions.includes(paymentOption)) {
+    // Validate dates
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
       return res.status(400).json({
         success: false,
-        message: "Invalid paymentOption. Use 'pay_later' or 'pay_now'.",
+        message: "Invalid check-in or check-out date",
       });
     }
 
-    // Validate paymentStatus
-    const validPaymentStatuses = ["pending", "paid"];
-    if (!validPaymentStatuses.includes(paymentStatus)) {
+    if (checkOutDate <= checkInDate) {
       return res.status(400).json({
         success: false,
-        message: "Invalid paymentStatus. Use 'pending' or 'paid'.",
+        message: "Check-out date must be after check-in date",
       });
     }
 
-    const booking = await createBooking({
+    // Validate guests
+    if (Number(guests) < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Guests must be at least 1",
+      });
+    }
+
+    // Validate payment option
+    if (paymentOption !== "later" && paymentOption !== "now") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment option",
+      });
+    }
+
+    // Validate payment status
+    if (paymentStatus !== "pending" && paymentStatus !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment status",
+      });
+    }
+
+    const newBooking = createBooking({
       roomId,
+      roomSlug,
+      roomName,
       guestName,
       guestEmail,
       checkIn,
@@ -78,19 +108,23 @@ export const addBooking = async (req: Request, res: Response) => {
       guests: Number(guests),
       paymentOption,
       paymentStatus,
+      totalAmount: Number(totalAmount),
     });
 
     return res.status(201).json({
       success: true,
-      message: "Booking created successfully",
-      data: booking,
+      message:
+        paymentOption === "now"
+          ? "Payment successful and booking confirmed"
+          : "Booking created successfully",
+      data: newBooking,
     });
   } catch (error) {
     console.error("Error creating booking:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error while creating booking",
+      message: "Internal server error",
     });
   }
-};
+}

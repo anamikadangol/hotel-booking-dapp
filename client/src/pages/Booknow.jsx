@@ -1,39 +1,42 @@
 import React, { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+
+// Room data with separate images and prices
 import room1 from "../images/room-1.jpeg";
 import room2 from "../images/room-2.jpeg";
 import room3 from "../images/room-3.jpeg";
 
 const roomData = {
   "standard-room": {
-    roomId: "RM-101",
+    id: "RM-101",
     name: "Standard Room",
-    price: 80,
-    image: room1,
     description: "A comfortable room for two guests with essential amenities.",
+    price: 80,
     capacity: 2,
+    image: room1,
   },
   "deluxe-room": {
-    roomId: "RM-102",
+    id: "RM-102",
     name: "Deluxe Room",
+    description:
+      "A spacious deluxe room with modern facilities and extra comfort.",
     price: 120,
-    image: room2,
-    description: "A spacious deluxe room with modern facilities and extra comfort.",
     capacity: 3,
+    image: room2,
   },
-  suite: {
-    roomId: "RM-103",
+  "suite": {
+    id: "RM-103",
     name: "Executive Suite",
-    price: 250,
-    image: room3,
     description: "A premium suite offering luxury amenities and extra space.",
+    price: 250,
     capacity: 4,
+    image: room3,
   },
 };
 
 export default function Booknow() {
   const { slug } = useParams();
-  const selectedRoom = roomData[slug];
+  const room = roomData[slug];
 
   const [formData, setFormData] = useState({
     guestName: "",
@@ -44,19 +47,20 @@ export default function Booknow() {
   });
 
   const [paymentOption, setPaymentOption] = useState("later"); // later | now
-
   const [cardData, setCardData] = useState({
     cardNumber: "",
-    expDate: "",
+    expiry: "",
     cvv: "",
   });
 
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!selectedRoom) {
+  // If slug not found
+  if (!room) {
     return (
-      <section style={{ maxWidth: "700px", margin: "2rem auto", padding: "1rem" }}>
+      <section style={{ maxWidth: "900px", margin: "2rem auto", padding: "1rem" }}>
         <h1>Room not found</h1>
         <Link to="/rooms" className="btn-primary">
           Back to Rooms
@@ -65,6 +69,7 @@ export default function Booknow() {
     );
   }
 
+  // Helpers
   function handleChange(e) {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -76,220 +81,223 @@ export default function Booknow() {
   function handleCardChange(e) {
     const { name, value } = e.target;
 
-    // Allow only digits for card number and CVV
+    let cleaned = value;
+
     if (name === "cardNumber") {
-      setCardData((prev) => ({
-        ...prev,
-        cardNumber: value.replace(/\D/g, "").slice(0, 16),
-      }));
-      return;
+      cleaned = value.replace(/\D/g, "").slice(0, 16);
     }
 
     if (name === "cvv") {
-      setCardData((prev) => ({
-        ...prev,
-        cvv: value.replace(/\D/g, "").slice(0, 3),
-      }));
-      return;
+      cleaned = value.replace(/\D/g, "").slice(0, 3);
     }
 
-    // Expiry field
-    if (name === "expDate") {
-      let formatted = value.replace(/[^\d]/g, "").slice(0, 4);
-
-      if (formatted.length >= 3) {
-        formatted = `${formatted.slice(0, 2)}/${formatted.slice(2)}`;
+    if (name === "expiry") {
+      // auto format MM/YY
+      let digits = value.replace(/\D/g, "").slice(0, 4);
+      if (digits.length >= 3) {
+        cleaned = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+      } else {
+        cleaned = digits;
       }
-
-      setCardData((prev) => ({
-        ...prev,
-        expDate: formatted,
-      }));
-      return;
     }
 
     setCardData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: cleaned,
     }));
   }
 
-  const totalNights = useMemo(() => {
-    if (!formData.checkIn || !formData.checkOut) return 0;
+  function validatePayNow() {
+    const cardNumberRegex = /^\d{16}$/;
+    const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+    const cvvRegex = /^\d{3}$/;
 
-    const checkInDate = new Date(formData.checkIn);
-    const checkOutDate = new Date(formData.checkOut);
-
-    const diffTime = checkOutDate - checkInDate;
-    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return nights > 0 ? nights : 0;
-  }, [formData.checkIn, formData.checkOut]);
-
-  const totalAmount = totalNights * selectedRoom.price;
-
-  function validateBookingFields() {
-    if (!formData.guestName || !formData.guestEmail || !formData.checkIn || !formData.checkOut) {
-      setMessage("Please fill in all booking details.");
-      return false;
+    if (!cardNumberRegex.test(cardData.cardNumber)) {
+      return "Invalid card number. It must be exactly 16 digits.";
     }
 
-    if (totalNights <= 0) {
-      setMessage("Booking failed: Check-out date must be after check-in date.");
-      return false;
+    if (!expiryRegex.test(cardData.expiry)) {
+      return "Invalid expiry date. Use MM/YY format.";
     }
 
-    if (formData.guests > selectedRoom.capacity) {
-      setMessage(
-        `Booking failed: ${selectedRoom.name} allows maximum ${selectedRoom.capacity} guest(s).`
-      );
-      return false;
+    if (!cvvRegex.test(cardData.cvv)) {
+      return "Invalid CVV. It must be exactly 3 digits.";
     }
 
-    return true;
+    return "";
   }
 
-  function validatePayment() {
-    const cleanCardNumber = cardData.cardNumber.replace(/\s/g, "");
+  const bookingSummary = useMemo(() => {
+    const checkInDate = formData.checkIn ? new Date(formData.checkIn) : null;
+    const checkOutDate = formData.checkOut ? new Date(formData.checkOut) : null;
 
-    // Card number must be exactly 16 digits
-    if (!/^\d{16}$/.test(cleanCardNumber)) {
-      setMessage("Booking failed: Invalid card number. Card number must be exactly 16 digits.");
-      return false;
+    let nights = 0;
+    if (checkInDate && checkOutDate && checkOutDate > checkInDate) {
+      const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+      nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Expiry date must be MM/YY
-    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(cardData.expDate)) {
-      setMessage("Booking failed: Invalid expiry date. Use MM/YY format.");
-      return false;
+    return {
+      nights,
+      totalAmount: nights > 0 ? nights * room.price : room.price,
+    };
+  }, [formData.checkIn, formData.checkOut, room.price]);
+
+  async function createBooking(selectedPaymentOption) {
+    setMessage("");
+    setError("");
+
+    // Basic validation
+    if (
+      !formData.guestName ||
+      !formData.guestEmail ||
+      !formData.checkIn ||
+      !formData.checkOut
+    ) {
+      setError("Please fill in all required booking fields.");
+      return;
     }
 
-    // CVV must be exactly 3 digits
-    if (!/^\d{3}$/.test(cardData.cvv)) {
-      setMessage("Booking failed: Invalid CVV. CVV must be exactly 3 digits.");
-      return false;
+    if (new Date(formData.checkOut) <= new Date(formData.checkIn)) {
+      setError("Check-out date must be after check-in date.");
+      return;
     }
 
-    return true;
-  }
+    // Pay Now validation
+    if (selectedPaymentOption === "now") {
+      const paymentError = validatePayNow();
+      if (paymentError) {
+        setError(paymentError);
+        return;
+      }
+    }
 
-  async function createBooking(successPrefix = "") {
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setMessage("");
-
-      const bookingPayload = {
-        roomId: selectedRoom.roomId,
+      const payload = {
+        roomId: room.id,
+        roomSlug: slug,
+        roomName: room.name,
         guestName: formData.guestName,
         guestEmail: formData.guestEmail,
         checkIn: formData.checkIn,
         checkOut: formData.checkOut,
         guests: Number(formData.guests),
+        paymentOption: selectedPaymentOption, // "later" or "now"
+        paymentStatus: selectedPaymentOption === "now" ? "paid" : "pending",
+        totalAmount: bookingSummary.totalAmount,
       };
 
-      const response = await fetch("http://localhost:5000/api/bookings", {
+      // IMPORTANT: /api/bookings for GitHub Codespaces (NOT localhost:5000)
+      const response = await fetch("/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(bookingPayload),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
 
-      if (result.success) {
-        const bookingId =
-          result.data?.id ||
-          result.data?.bookingId ||
-          result.data?._id ||
-          "Generated Successfully";
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Booking failed.");
+      }
 
+      const bookingId =
+        result?.data?.id ||
+        result?.data?.bookingId ||
+        result?.data?._id ||
+        Date.now();
+
+      if (selectedPaymentOption === "now") {
         setMessage(
-          `${successPrefix} Booking created successfully for "${selectedRoom.name}". Booking ID: ${bookingId}`
+          `Payment successful! Booking confirmed for "${room.name}". Booking ID: ${bookingId}`
         );
       } else {
-        setMessage(result.message || "Booking failed.");
+        setMessage(
+          `Booking created successfully for "${room.name}". Booking ID: ${bookingId}`
+        );
       }
-    } catch (error) {
-      setMessage("Could not connect to backend. Make sure server is running on port 5000.");
+
+      // Reset form after success
+      setFormData({
+        guestName: "",
+        guestEmail: "",
+        checkIn: "",
+        checkOut: "",
+        guests: 1,
+      });
+
+      setCardData({
+        cardNumber: "",
+        expiry: "",
+        cvv: "",
+      });
+
+      setPaymentOption("later");
+    } catch (err) {
+      setError(
+        err.message || "Could not connect to backend. Make sure server is running on port 5000."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function handlePayLater() {
-    const isBookingValid = validateBookingFields();
-    if (!isBookingValid) return;
-
-    await createBooking("");
-  }
-
-  async function handlePayNow() {
-    const isBookingValid = validateBookingFields();
-    if (!isBookingValid) return;
-
-    const isPaymentValid = validatePayment();
-    if (!isPaymentValid) return;
-
-    await createBooking("Payment successful. Booking confirmed.");
-  }
-
   return (
     <section
       style={{
-        maxWidth: "1100px",
+        maxWidth: "1200px",
         margin: "2rem auto",
-        padding: "1.5rem",
+        padding: "1rem",
       }}
     >
-      <h1 style={{ textAlign: "center", marginBottom: "1.5rem" }}>Book Your Stay</h1>
+      <h1 style={{ textAlign: "center", marginBottom: "2rem" }}>Book Room</h1>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gridTemplateColumns: "1fr 1fr",
           gap: "2rem",
           alignItems: "start",
         }}
       >
-        {/* LEFT SIDE - ROOM + BOOKING SUMMARY */}
-        <div
-          style={{
-            display: "grid",
-            gap: "1.5rem",
-          }}
-        >
-          {/* Room Summary Card */}
+        {/* LEFT SIDE */}
+        <div>
+          {/* Room Card */}
           <div
             style={{
-              border: "1px solid #ddd",
+              background: "#fff",
               borderRadius: "14px",
               overflow: "hidden",
-              background: "#fff",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+              marginBottom: "1.5rem",
             }}
           >
             <img
-              src={selectedRoom.image}
-              alt={selectedRoom.name}
+              src={room.image}
+              alt={room.name}
               style={{
                 width: "100%",
-                height: "240px",
+                height: "280px",
                 objectFit: "cover",
+                display: "block",
               }}
             />
 
-            <div style={{ padding: "1.25rem" }}>
-              <h2 style={{ marginBottom: "0.5rem" }}>{selectedRoom.name}</h2>
-              <p style={{ marginBottom: "0.75rem", color: "#555" }}>{selectedRoom.description}</p>
-              <p>
-                <strong>Room ID:</strong> {selectedRoom.roomId}
+            <div style={{ padding: "1.5rem", textAlign: "center" }}>
+              <h2 style={{ marginBottom: "0.75rem" }}>{room.name}</h2>
+              <p style={{ color: "#555", marginBottom: "1rem" }}>{room.description}</p>
+
+              <p style={{ margin: "0.4rem 0" }}>
+                <strong>Room ID:</strong> {room.id}
               </p>
-              <p>
-                <strong>Price:</strong> £{selectedRoom.price} / night
+              <p style={{ margin: "0.4rem 0" }}>
+                <strong>Price:</strong> £{room.price} / night
               </p>
-              <p>
-                <strong>Capacity:</strong> {selectedRoom.capacity} guest(s)
+              <p style={{ margin: "0.4rem 0" }}>
+                <strong>Capacity:</strong> {room.capacity} guest(s)
               </p>
             </div>
           </div>
@@ -297,54 +305,53 @@ export default function Booknow() {
           {/* Booking Summary */}
           <div
             style={{
-              border: "1px solid #ddd",
-              borderRadius: "14px",
               background: "#fff",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-              padding: "1.25rem",
+              borderRadius: "14px",
+              boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+              padding: "1.5rem",
             }}
           >
-            <h3 style={{ marginBottom: "1rem" }}>Booking Summary</h3>
+            <h2 style={{ textAlign: "center", marginBottom: "1rem" }}>Booking Summary</h2>
 
-            <div style={{ display: "grid", gap: "0.6rem" }}>
-              <p>
-                <strong>Room:</strong> {selectedRoom.name}
-              </p>
-              <p>
-                <strong>Guests:</strong> {formData.guests} {formData.guests === 1 ? "Guest" : "Guests"}
-              </p>
-              <p>
-                <strong>Check-in:</strong> {formData.checkIn || "Not selected"}
-              </p>
-              <p>
-                <strong>Check-out:</strong> {formData.checkOut || "Not selected"}
-              </p>
-              <p>
-                <strong>Total nights:</strong> {totalNights}
-              </p>
-              <p>
-                <strong>Total amount:</strong> £{totalAmount}
-              </p>
-              <p>
-                <strong>Payment option:</strong> {paymentOption === "later" ? "Pay Later" : "Pay Now"}
-              </p>
-            </div>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Room:</strong> {room.name}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Guests:</strong> {formData.guests}{" "}
+              {formData.guests === 1 ? "Guest" : "Guests"}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Check-in:</strong> {formData.checkIn || "Not selected"}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Check-out:</strong> {formData.checkOut || "Not selected"}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Total nights:</strong> {bookingSummary.nights || 0}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Total amount:</strong> £{bookingSummary.totalAmount}
+            </p>
+            <p style={{ margin: "0.5rem 0" }}>
+              <strong>Payment option:</strong>{" "}
+              {paymentOption === "now" ? "Pay Now" : "Pay Later"}
+            </p>
           </div>
         </div>
 
-        {/* RIGHT SIDE - FORM */}
+        {/* RIGHT SIDE */}
         <div
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "14px",
             background: "#fff",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+            borderRadius: "14px",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
             padding: "1.5rem",
           }}
         >
-          <h3 style={{ marginBottom: "1rem" }}>Guest Details</h3>
-
-          <div style={{ display: "grid", gap: "1rem" }}>
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            style={{ display: "grid", gap: "1rem" }}
+          >
             <input
               type="text"
               name="guestName"
@@ -352,11 +359,7 @@ export default function Booknow() {
               value={formData.guestName}
               onChange={handleChange}
               required
-              style={{
-                padding: "0.8rem",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-              }}
+              style={inputStyle}
             />
 
             <input
@@ -366,17 +369,13 @@ export default function Booknow() {
               value={formData.guestEmail}
               onChange={handleChange}
               required
-              style={{
-                padding: "0.8rem",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-              }}
+              style={inputStyle}
             />
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gridTemplateColumns: "1fr 1fr",
                 gap: "1rem",
               }}
             >
@@ -386,11 +385,7 @@ export default function Booknow() {
                 value={formData.checkIn}
                 onChange={handleChange}
                 required
-                style={{
-                  padding: "0.8rem",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
-                }}
+                style={inputStyle}
               />
 
               <input
@@ -399,44 +394,44 @@ export default function Booknow() {
                 value={formData.checkOut}
                 onChange={handleChange}
                 required
-                style={{
-                  padding: "0.8rem",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
-                }}
+                style={inputStyle}
               />
-
-              {/* GUESTS DROPDOWN */}
-              <select
-                name="guests"
-                value={formData.guests}
-                onChange={handleChange}
-                required
-                style={{
-                  padding: "0.8rem",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc",
-                }}
-              >
-                <option value={1}>1 Guest</option>
-                <option value={2}>2 Guests</option>
-                <option value={3}>3 Guests</option>
-                <option value={4}>4 Guests</option>
-              </select>
             </div>
 
-            {/* Payment Option */}
-            <div style={{ marginTop: "0.5rem" }}>
-              <h3 style={{ marginBottom: "0.75rem" }}>Choose Payment Option</h3>
+            <select
+              name="guests"
+              value={formData.guests}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value={1}>1 Guest</option>
+              <option value={2}>2 Guests</option>
+              <option value={3}>3 Guests</option>
+              <option value={4}>4 Guests</option>
+            </select>
 
-              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+            {/* Payment Options */}
+            <div style={{ marginTop: "1rem" }}>
+              <h2 style={{ textAlign: "center", marginBottom: "1rem", fontSize: "1.4rem" }}>
+                Choose Payment Option
+              </h2>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "2rem",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                }}
+              >
                 <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <input
                     type="radio"
                     name="paymentOption"
                     value="later"
                     checked={paymentOption === "later"}
-                    onChange={(e) => setPaymentOption(e.target.value)}
+                    onChange={() => setPaymentOption("later")}
                   />
                   Pay Later
                 </label>
@@ -447,25 +442,26 @@ export default function Booknow() {
                     name="paymentOption"
                     value="now"
                     checked={paymentOption === "now"}
-                    onChange={(e) => setPaymentOption(e.target.value)}
+                    onChange={() => setPaymentOption("now")}
                   />
                   Pay Now
                 </label>
               </div>
             </div>
 
-            {/* Card Details (only for Pay Now) */}
+            {/* Card Details (only when Pay Now selected) */}
             {paymentOption === "now" && (
               <div
                 style={{
-                  marginTop: "0.5rem",
-                  padding: "1rem",
                   border: "1px solid #ddd",
-                  borderRadius: "10px",
-                  background: "#f8f9fa",
+                  borderRadius: "12px",
+                  padding: "1rem",
+                  background: "#fafafa",
                 }}
               >
-                <h3 style={{ marginBottom: "1rem" }}>Card Details</h3>
+                <h2 style={{ textAlign: "center", marginBottom: "1rem", fontSize: "1.4rem" }}>
+                  Card Details
+                </h2>
 
                 <input
                   type="text"
@@ -473,15 +469,7 @@ export default function Booknow() {
                   placeholder="Card Number (16 digits)"
                   value={cardData.cardNumber}
                   onChange={handleCardChange}
-                  maxLength="16"
-                  style={{
-                    width: "100%",
-                    padding: "0.8rem",
-                    borderRadius: "8px",
-                    border: "1px solid #ccc",
-                    marginBottom: "1rem",
-                    boxSizing: "border-box",
-                  }}
+                  style={{ ...inputStyle, marginBottom: "1rem" }}
                 />
 
                 <div
@@ -493,57 +481,41 @@ export default function Booknow() {
                 >
                   <input
                     type="text"
-                    name="expDate"
+                    name="expiry"
                     placeholder="MM/YY"
-                    value={cardData.expDate}
+                    value={cardData.expiry}
                     onChange={handleCardChange}
-                    maxLength="5"
-                    style={{
-                      padding: "0.8rem",
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                    }}
+                    style={inputStyle}
                   />
 
                   <input
                     type="text"
                     name="cvv"
-                    placeholder="CVV (3 digits)"
+                    placeholder="CVV"
                     value={cardData.cvv}
                     onChange={handleCardChange}
-                    maxLength="3"
-                    style={{
-                      padding: "0.8rem",
-                      borderRadius: "8px",
-                      border: "1px solid #ccc",
-                    }}
+                    style={inputStyle}
                   />
                 </div>
               </div>
             )}
 
-            {/* ACTION BUTTONS */}
+            {/* Buttons */}
             <div
               style={{
-                display: "flex",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
                 gap: "1rem",
-                flexWrap: "wrap",
                 marginTop: "1rem",
               }}
             >
               <button
                 type="button"
-                onClick={handlePayLater}
+                onClick={() => createBooking("later")}
                 disabled={loading}
                 style={{
-                  flex: 1,
-                  padding: "0.9rem",
+                  ...buttonStyle,
                   background: "#6c757d",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
                 }}
               >
                 {loading ? "Processing..." : "Pay Later"}
@@ -551,39 +523,47 @@ export default function Booknow() {
 
               <button
                 type="button"
-                onClick={handlePayNow}
+                onClick={() => createBooking("now")}
                 disabled={loading}
                 style={{
-                  flex: 1,
-                  padding: "0.9rem",
+                  ...buttonStyle,
                   background: "#198754",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
                 }}
               >
                 {loading ? "Processing..." : "Pay Now"}
               </button>
             </div>
-          </div>
+          </form>
 
-          {/* MESSAGE */}
+          {/* Messages */}
           {message && (
             <p
               style={{
-                marginTop: "1.25rem",
-                color: message.toLowerCase().includes("failed") ? "red" : "green",
+                marginTop: "1.5rem",
+                color: "green",
                 fontWeight: "bold",
                 textAlign: "center",
+                lineHeight: "1.6",
               }}
             >
               {message}
             </p>
           )}
 
-          {/* BACK BUTTON */}
+          {error && (
+            <p
+              style={{
+                marginTop: "1.5rem",
+                color: "red",
+                fontWeight: "bold",
+                textAlign: "center",
+                lineHeight: "1.6",
+              }}
+            >
+              {error}
+            </p>
+          )}
+
           <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
             <Link to="/rooms" className="btn-primary">
               Back to Rooms
@@ -594,3 +574,24 @@ export default function Booknow() {
     </section>
   );
 }
+
+// Reusable styles
+const inputStyle = {
+  width: "100%",
+  padding: "0.9rem 1rem",
+  borderRadius: "10px",
+  border: "1px solid #ccc",
+  fontSize: "1rem",
+  boxSizing: "border-box",
+};
+
+const buttonStyle = {
+  width: "100%",
+  padding: "0.95rem 1rem",
+  border: "none",
+  borderRadius: "10px",
+  color: "#fff",
+  fontWeight: "bold",
+  fontSize: "1rem",
+  cursor: "pointer",
+};

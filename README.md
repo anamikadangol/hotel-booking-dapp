@@ -20,7 +20,7 @@ https://github.com/anamikadangol/hotel-booking-dapp
 Go to the project directory
 ```bash
   cd /workspaces/hotel-booking-dapp/server
-  npm run dev
+  npm run dev 
 ```
 ```bash
   cd /workspaces/hotel-booking-dapp/client
