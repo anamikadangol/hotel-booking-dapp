@@ -8,13 +8,13 @@ import FeaturedRooms from "../Components/FeaturedRooms";
 const Home = () => {
   return (
     <>
-      <Hero hero="defaultHero">
+      <Hero hero="defaultHero"></Hero>
       <Banner title="Luxurious Rooms" subtitle="Deluxe rooms starting at £100/">
         <Link to="/rooms" >
           Our Rooms
         </Link>
         </Banner>
-      </Hero>  
+        
           <Services />
           <FeaturedRooms />
     </>

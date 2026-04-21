@@ -1,11 +1,11 @@
 import React from "react";
-import defaultBcg from "../images/defaultBcg.jpeg";
+import defaultBcg from "../images/defaultBcg.jpg";
 
 const Hero = ({ children, hero }) => {
   const heroStyle =
     hero === "defaultHero"
       ? {
-          minHeight: "25vh",
+          minHeight: "60vh",
           backgroundImage: `url(${defaultBcg})`,
           backgroundSize: "cover",
           backgroundPosition: "center",

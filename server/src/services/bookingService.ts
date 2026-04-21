@@ -1,37 +1,63 @@
 import fs from "fs";
 import path from "path";
-import { sendBookingPayment } from "./algorandService";
 
-export interface Booking {
-  id: string;
+type PaymentOption = "pay_later" | "pay_now";
+type PaymentStatus = "pending" | "paid";
+
+export interface BookingInput {
   roomId: string;
   guestName: string;
   guestEmail: string;
   checkIn: string;
   checkOut: string;
   guests: number;
-  totalPrice: number;
+  paymentOption: PaymentOption;
+  paymentStatus: PaymentStatus;
+}
+
+export interface Booking extends BookingInput {
+  id: string;
   createdAt: string;
-  blockchainTxId?: string | null;
-  blockchainExplorerUrl?: string | null;
+  blockchainTxId: string | null;
+  blockchainExplorerUrl: string | null;
 }
 
 const bookingsFilePath = path.join(__dirname, "../data/bookings.json");
 
-function readBookings(): Booking[] {
+function ensureBookingsFileExists() {
+  const dataDir = path.dirname(bookingsFilePath);
+
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
   if (!fs.existsSync(bookingsFilePath)) {
     fs.writeFileSync(bookingsFilePath, "[]", "utf-8");
+  }
+}
+
+function readBookings(): Booking[] {
+  ensureBookingsFileExists();
+
+  const rawData = fs.readFileSync(bookingsFilePath, "utf-8").trim();
+
+  if (!rawData) {
     return [];
   }
 
-  const raw = fs.readFileSync(bookingsFilePath, "utf-8").trim();
+  try {
+    const parsed = JSON.parse(rawData);
 
-  if (!raw) {
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Invalid bookings.json format. Resetting to empty array.");
     fs.writeFileSync(bookingsFilePath, "[]", "utf-8");
     return [];
   }
-
-  return JSON.parse(raw);
 }
 
 function saveBookings(bookings: Booking[]) {
@@ -42,25 +68,31 @@ export function getAllBookings(): Booking[] {
   return readBookings();
 }
 
-export async function createBooking(
-  bookingData: Omit<Booking, "id" | "createdAt" | "blockchainTxId" | "blockchainExplorerUrl">
-): Promise<Booking> {
+export async function createBooking(input: BookingInput): Promise<Booking> {
   const bookings = readBookings();
 
+  // OPTIONAL: Placeholder for future blockchain integration
+  // Since your Algorand integration may be partially working / demo-based,
+  // we safely keep these fields for hybrid DApp structure.
   let blockchainTxId: string | null = null;
   let blockchainExplorerUrl: string | null = null;
 
-  try {
-    const blockchainResult = await sendBookingPayment(1000);
-    blockchainTxId = blockchainResult.txId;
-    blockchainExplorerUrl = blockchainResult.explorerUrl;
-  } catch (error) {
-    console.error("Algorand payment failed:", error);
+  // If payment is "pay_now", we can simulate blockchain-ready metadata
+  if (input.paymentOption === "pay_now" && input.paymentStatus === "paid") {
+    blockchainTxId = `SIMULATED-TX-${Date.now()}`;
+    blockchainExplorerUrl = `https://testnet.algoexplorer.io/tx/${blockchainTxId}`;
   }
 
   const newBooking: Booking = {
     id: Date.now().toString(),
-    ...bookingData,
+    roomId: input.roomId,
+    guestName: input.guestName,
+    guestEmail: input.guestEmail,
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+    guests: input.guests,
+    paymentOption: input.paymentOption,
+    paymentStatus: input.paymentStatus,
     createdAt: new Date().toISOString(),
     blockchainTxId,
     blockchainExplorerUrl,
