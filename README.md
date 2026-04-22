@@ -5,6 +5,12 @@ This project combines a **React front end**, **Node.js + Express back end**, and
 ## Repository of Admin Panel
 https://github.com/anamikadangol/hotel-booking-dapp
 
+## Repository of Reference Open-Source Software (OSS) Project
+https://github.com/Nabia-Sheikh/hotel-management-admin
+
+## Link of Reference Open-Source Software (OSS) Project
+https://hotel-management-by-nabia.netlify.app/
+
 ## Project Overview
 The Hotel Booking DApp allows users to:
 
