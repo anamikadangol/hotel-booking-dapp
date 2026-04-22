@@ -82,7 +82,7 @@ hotel-booking-dapp/
 │   └── .env               # local only (not pushed)
 │
 └── README.md
-
+```
 
 Go to the project directory
 ```bash
