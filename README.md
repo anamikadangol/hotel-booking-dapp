@@ -83,6 +83,7 @@ hotel-booking-dapp/
 │
 └── README.md
 
+
 Go to the project directory
 ```bash
   cd /workspaces/hotel-booking-dapp/server
